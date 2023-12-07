@@ -27,7 +27,7 @@ const taskData = [
 // Gets the current date
 let date = new Date()
 
-console.log(date)
+console.log("run once")
 
 let day = date.getDate();
 let month = date.getMonth() + 1;
@@ -45,11 +45,11 @@ let li_task = null;
 
 let heading = null;
 
+let saved = null;
+
 document.addEventListener("DOMContentLoaded", function() {
 
     heading = document.querySelector("header>h1");
-
-    console.log(heading)
 
     for (i in taskData) {
         document.getElementById("task_list").appendChild(loadTaskData(taskData[i], i))
@@ -61,30 +61,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     refreshEdit()
 
-    document.getElementById("save_task").addEventListener("click", function(event) {
+    document.getElementById("save_task").addEventListener("click", saveBtn);
 
-        event.preventDefault;
-
-        newtask = createTask()
-
-        updateStatus()
-
-        document.getElementById("task_list").appendChild(loadTaskData(taskData[newtask], newtask));
-
-        checkTasks()
-
-        refreshDel()
-
-        refreshEdit()
-
-    });
-
-    document.getElementById("modal_wrapper").addEventListener("click", (event) => {
-        if (event.target.id === "modal_wrapper") {
-            hideModal()
-        }
-    });
-
+    document.getElementById("modal_wrapper").addEventListener("click", hideTaskCreator);
 
     document.getElementById("datacheck").addEventListener("click", function() {
         console.log(taskData)
@@ -99,8 +78,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("completed").addEventListener("click", completedOnly)
 
 });
-    
-
 
 function createTask() {
 
@@ -178,7 +155,10 @@ function loadTaskData(temp, num) {
 
 /*Functions relating to the modal aka task creator*/
 function hideModal() {
-    document.getElementById("modal_wrapper").style.display = "none"
+    document.getElementById("modal_wrapper").style.display = "none";
+    document.getElementById("new_task_title").value = '';
+    document.getElementById("new_task_description").value = '';
+    document.getElementById("new_task_due_date").value = '';
 };
 
 function openTaskCreator() {
@@ -217,16 +197,68 @@ function updateStatus() {
     document.getElementById("stats").innerText = (total-done) + " tasks due, " + total + " tasks total"
 }
 
+function hideTaskCreator(evt) {
+    if (evt.target.id === "modal_wrapper") {
+        hideModal()
+    }
+}
+
+function saveBtn(evt) {
+    
+    evt.preventDefault;
+
+    newtask = createTask()
+
+    updateStatus()
+
+    document.getElementById("task_list").appendChild(loadTaskData(taskData[newtask], newtask));
+
+    checkTasks()
+
+    refreshDel()
+
+    refreshEdit()
+
+    hideModal()
+}
+
 function editTask(evt) {
+    templi = evt.target.parentNode.parentNode
     tempelem = evt.target.parentNode.parentNode.firstChild.id;
     tasknum = tempelem.slice(-1);
-
+    
     for (i in taskData) {
         if (i == tasknum) {
-            taskData.splice(i, 1)
-            
+
+            saved = i
+
+            document.getElementById("new_task_title").value = taskData[i]["title"]
+            document.getElementById("new_task_description").value = taskData[i]["description"]
+            document.getElementById("new_task_due_date").value = taskData[i]["dueDate"]
+
+            document.getElementById("save_task").removeEventListener("click", saveBtn);
+
+            document.getElementById("save_task").addEventListener("click", saveEdit);
+
+            document.getElementById("modal_wrapper").removeEventListener("click", hideTaskCreator);
+
+            document.getElementById("modal_wrapper").addEventListener("click", discardEdit);
+
+            openTaskCreator()
+
         }
     }
+}
+
+function restoreFunc() {
+
+    document.getElementById("modal_wrapper").removeEventListener("click", hideTaskCreator);
+
+    document.getElementById("save_task").removeEventListener("click", saveEdit)
+
+    document.getElementById("save_task").addEventListener("click", saveBtn)
+
+    document.getElementById("modal_wrapper").addEventListener("click", discardEdit);
 }
 
 function deleteTask(evt) {
@@ -246,7 +278,7 @@ function deleteTask(evt) {
             }
             if (count != 0) {
                 for (let j = 0;  j < (count); ++j) {
-                    console.log(('task_' + j));
+                    
                     task_ul.children[j].firstChild.id = ('task_' + j);
                 };
             } else {
@@ -255,6 +287,13 @@ function deleteTask(evt) {
         }  
     }
     updateStatus()
+}
+
+function discardEdit(evt) {
+    if (evt.target.id === "modal_wrapper") {
+        hideModal()
+        restoreFunc()
+    };
 }
 
 function refreshDel() {
@@ -350,4 +389,40 @@ function pendingOnly() {
             }
         }
     );
+}
+
+function saveEdit() {
+
+    newtitle = document.getElementById("new_task_title").value
+    newdesc = document.getElementById("new_task_description").value
+    newdate = document.getElementById("new_task_due_date").value
+
+    let edited = {
+        title: newtitle,
+        description: newdesc,
+        dueDate: newdate,
+        completed: false
+    }
+
+    taskData.splice(saved, 1, edited)
+
+    temptask = document.getElementById("task_" + saved).parentNode 
+
+    console.log(temptask)
+
+    temptask.childNodes[1].innerText = taskData[saved]["title"]
+    temptask.childNodes[2].innerText = taskData[saved]["description"]
+    temptask.childNodes[3].innerText = "Due: " + taskData[saved]["dueDate"]
+
+    temp1 = new Date(taskData[saved]["dueDate"])
+    temp2 = new Date(currentDate)
+
+    if (temp2 > temp1) {
+        temptask.classList.add("overdue")
+    } else {
+        temptask.classList.remove("overdue")
+    }
+    
+    hideModal()
+    restoreFunc()
 }
